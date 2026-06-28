@@ -33,31 +33,11 @@ while True:
 
     # Draw landmarks
     if results.multi_hand_landmarks:
-     for hand_landmarks in results.multi_hand_landmarks:
-
-        mp_draw.draw_landmarks(
-            frame,
-            hand_landmarks,
-            mp_hands.HAND_CONNECTIONS
-        )
-
-        landmarks = hand_landmarks.landmark
-
-        # Check if fingers are open
-        index_open = landmarks[8].y < landmarks[6].y
-        middle_open = landmarks[12].y < landmarks[10].y
-        ring_open = landmarks[16].y < landmarks[14].y
-        pinky_open = landmarks[20].y < landmarks[18].y
-
-        if index_open and middle_open and ring_open and pinky_open:
-            cv2.putText(
+        for hand_landmarks in results.multi_hand_landmarks:
+            mp_draw.draw_landmarks(
                 frame,
-                "Gesture: HELLO",
-                (20, 50),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 255, 0),
-                2
+                hand_landmarks,
+                mp_hands.HAND_CONNECTIONS
             )
 
     cv2.imshow("Sign Language Translator", frame)
