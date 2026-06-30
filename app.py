@@ -1,25 +1,105 @@
 import cv2
 import mediapipe as mp
 
-# ==============================
-# Initialize MediaPipe Hands
-# ==============================
+# =====================================
+# MediaPipe Initialization
+# =====================================
 
 mp_hands = mp.solutions.hands
+mp_draw = mp.solutions.drawing_utils
 
 hands = mp_hands.Hands(
     static_image_mode=False,
     max_num_hands=1,
-    min_detection_confidence=0.7
+    min_detection_confidence=0.7,
+    min_tracking_confidence=0.7
 )
 
-mp_draw = mp.solutions.drawing_utils
+# =====================================
+# Finger Detection Functions
+# =====================================
 
-# ==============================
-# Open Webcam
-# ==============================
+def is_thumb_open(landmarks):
+    return (
+        landmarks[4].x < landmarks[3].x
+        and landmarks[3].x < landmarks[2].x
+    )
+
+
+def is_index_open(landmarks):
+    return (
+        landmarks[8].y < landmarks[6].y
+        and landmarks[6].y < landmarks[5].y
+    )
+
+
+def is_middle_open(landmarks):
+    return (
+        landmarks[12].y < landmarks[10].y
+        and landmarks[10].y < landmarks[9].y
+    )
+
+
+def is_ring_open(landmarks):
+    return (
+        landmarks[16].y < landmarks[14].y
+        and landmarks[14].y < landmarks[13].y
+    )
+
+
+def is_pinky_open(landmarks):
+    return (
+        landmarks[20].y < landmarks[18].y
+        and landmarks[18].y < landmarks[17].y
+    )
+
+
+# =====================================
+# Gesture Recognition
+# =====================================
+
+def detect_gesture(landmarks):
+
+    thumb = is_thumb_open(landmarks)
+    index = is_index_open(landmarks)
+    middle = is_middle_open(landmarks)
+    ring = is_ring_open(landmarks)
+    pinky = is_pinky_open(landmarks)
+
+    if thumb and index and middle and ring and pinky:
+        return "HELLO"
+
+    elif thumb and not index and not middle and not ring and not pinky:
+        return "YES"
+
+    elif not thumb and not index and not middle and not ring and not pinky:
+        return "STOP"
+
+    elif not thumb and index and not middle and not ring and not pinky:
+        return "ONE"
+
+    elif not thumb and index and middle and not ring and not pinky:
+        return "VICTORY"
+
+    elif not thumb and index and middle and ring and not pinky:
+        return "THREE"
+
+    elif not thumb and index and middle and ring and pinky:
+        return "FOUR"
+
+    return "No Gesture"
+
+
+# =====================================
+# Camera Initialization
+# =====================================
 
 camera = cv2.VideoCapture(0)
+
+window_name = "Sign Language Translator v4.0"
+# =====================================
+# Main Loop
+# =====================================
 
 while True:
 
@@ -34,9 +114,10 @@ while True:
 
     results = hands.process(rgb)
 
-    # Default values
     gesture = "No Gesture"
     status = "No Hand Detected"
+
+    finger_count = 0
 
     if results.multi_hand_landmarks:
 
@@ -52,65 +133,39 @@ while True:
 
             landmarks = hand_landmarks.landmark
 
-            # ==========================
-            # Finger Detection
-            # ==========================
+            thumb = is_thumb_open(landmarks)
+            index = is_index_open(landmarks)
+            middle = is_middle_open(landmarks)
+            ring = is_ring_open(landmarks)
+            pinky = is_pinky_open(landmarks)
 
-            thumb_open = landmarks[4].x < landmarks[3].x
+            finger_count = sum([
+                thumb,
+                index,
+                middle,
+                ring,
+                pinky
+            ])
 
-            index_open = landmarks[8].y < landmarks[6].y
-            middle_open = landmarks[12].y < landmarks[10].y
-            ring_open = landmarks[16].y < landmarks[14].y
-            pinky_open = landmarks[20].y < landmarks[18].y
+            gesture = detect_gesture(landmarks)
 
-            # ==========================
-            # Gesture Recognition
-            # ==========================
+    # =====================================
+    # UI
+    # =====================================
 
-            if index_open and middle_open and ring_open and pinky_open:
-                gesture = "HELLO"
-
-            elif (
-                thumb_open
-                and not index_open
-                and not middle_open
-                and not ring_open
-                and not pinky_open
-            ):
-                gesture = "YES"
-
-            elif (
-                not thumb_open
-                and not index_open
-                and not middle_open
-                and not ring_open
-                and not pinky_open
-            ):
-                gesture = "STOP"
-
-            elif (
-                index_open
-                and middle_open
-                and not ring_open
-                and not pinky_open
-            ):
-                gesture = "VICTORY"
-
-    # ==============================
-    # USER INTERFACE
-    # ==============================
-
-    cv2.rectangle(frame, (0, 0), (640, 120), (40, 40, 40), -1)
+    cv2.rectangle(frame, (0, 0), (640, 150), (35, 35, 35), -1)
 
     cv2.putText(
         frame,
         "SIGN LANGUAGE TRANSLATOR",
-        (50, 30),
+        (70, 30),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.8,
         (0, 255, 255),
         2
     )
+
+    status_color = (0, 255, 0) if status == "Hand Detected" else (0, 0, 255)
 
     cv2.putText(
         frame,
@@ -118,7 +173,7 @@ while True:
         (20, 65),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.6,
-        (255, 255, 255),
+        status_color,
         2
     )
 
@@ -128,14 +183,39 @@ while True:
         (20, 100),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.8,
-        (0, 255, 0),
+        (255, 255, 255),
         2
     )
 
-    cv2.imshow("Sign Language Translator v2.0", frame)
+    cv2.putText(
+        frame,
+        f"Open Fingers : {finger_count}",
+        (20, 135),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.6,
+        (255, 255, 0),
+        2
+    )
+
+    cv2.putText(
+        frame,
+        "Press Q to Exit",
+        (430, 135),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.5,
+        (180, 180, 180),
+        1
+    )
+
+    cv2.imshow(window_name, frame)
 
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
+
+
+# =====================================
+# Cleanup
+# =====================================
 
 camera.release()
 cv2.destroyAllWindows()
