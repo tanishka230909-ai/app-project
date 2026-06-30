@@ -1,4 +1,0 @@
-from PIL import Image
-
-img = Image.open("C:\\Users\\hp\\Downloads\\thanks.jpg")
-img.show()
